@@ -335,8 +335,8 @@
 <audio id="audio"></audio>
 
 <script>
-  const PROXY = 'https://api.allorigins.win/get?url=';
-  const DEEZER = 'https://api.deezer.com';
+  /* ── iTunes API — no proxy needed, no CORS issues ── */
+  const ITUNES = 'https://itunes.apple.com';
 
   const audio = document.getElementById('audio');
   const player = document.getElementById('player');
@@ -356,11 +356,44 @@
     return Math.floor(s/60) + ':' + (s%60 < 10 ? '0' : '') + (s%60);
   }
 
-  async function deezer(path) {
-    const url = encodeURIComponent(DEEZER + path);
-    const r = await fetch(PROXY + url);
+  /* Normalize iTunes track to common shape */
+  function normalize(t) {
+    return {
+      id: t.trackId,
+      title: t.trackName,
+      preview: t.previewUrl,
+      duration: Math.round((t.trackTimeMillis||30000)/1000),
+      artist: { name: t.artistName },
+      album: {
+        cover_small: t.artworkUrl60,
+        cover_medium: t.artworkUrl100,
+        cover_big: (t.artworkUrl100||'').replace('100x100','600x600'),
+        title: t.collectionName
+      }
+    };
+  }
+
+  async function itunesSearch(term, limit=25, entity='song') {
+    const url = `${ITUNES}/search?term=${encodeURIComponent(term)}&entity=${entity}&limit=${limit}&media=music`;
+    const r = await fetch(url);
     const j = await r.json();
-    return JSON.parse(j.contents);
+    return (j.results||[]).filter(x=>x.previewUrl);
+  }
+
+  async function itunesTop(genre='', limit=25) {
+    /* Use RSS feed for top charts */
+    const feed = genre
+      ? `${ITUNES}/rss/topsongs/limit=${limit}/genre=${genre}/json`
+      : `${ITUNES}/rss/topsongs/limit=${limit}/json`;
+    const r = await fetch(feed);
+    const j = await r.json();
+    const entries = j?.feed?.entry || [];
+    /* Each entry has id, name, artist — need to fetch preview via lookup */
+    const ids = entries.map(e => e.id?.attributes?.['im:id']).filter(Boolean).slice(0,limit);
+    if (!ids.length) return [];
+    const lookup = await fetch(`${ITUNES}/lookup?id=${ids.join(',')}&entity=song`);
+    const lj = await lookup.json();
+    return (lj.results||[]).filter(x=>x.previewUrl && x.trackName).map(normalize);
   }
 
   function toast(msg) {
@@ -455,8 +488,7 @@
     document.getElementById('track-list').innerHTML = '<div class="loading"><div class="spinner"></div><span>Loading…</span></div>';
     document.getElementById('songs-title').innerHTML = 'Top <em>Songs</em>';
     try {
-      const data = await deezer('/chart/0/tracks?limit=30');
-      const tracks = data.data || [];
+      const tracks = await itunesTop('', 25);
       if (!tracks.length) throw new Error('empty');
 
       const heroEl = document.getElementById('trending-hero');
@@ -483,58 +515,69 @@
     listEl._shown = next;
   }
 
+  /* Artists: load popular Indian + global artists */
+  const FEATURED_ARTISTS = ['Arijit Singh','Shreya Ghoshal','Taylor Swift','The Weeknd','Badshah','Dua Lipa','AP Dhillon','Drake'];
+
   async function loadArtists() {
-    try {
-      const data = await deezer('/chart/0/artists?limit=14');
-      const artists = data.data || [];
-      const row = document.getElementById('artist-row');
-      row.innerHTML = '';
-      artists.forEach(a => {
+    const row = document.getElementById('artist-row');
+    row.innerHTML = '';
+    for (const name of FEATURED_ARTISTS) {
+      try {
+        const r = await fetch(`${ITUNES}/search?term=${encodeURIComponent(name)}&entity=musicArtist&limit=1`);
+        const j = await r.json();
+        const a = j.results?.[0];
+        if (!a) continue;
+        const img = (await itunesSearch(name, 1))[0]?.album?.cover_medium || '';
         const div = document.createElement('div');
         div.className = 'artist-card';
-        div.innerHTML = `<img src="${a.picture_medium}" alt="${a.name}" loading="lazy"/><p>${a.name}</p>`;
-        div.addEventListener('click', () => searchArtist(a.name));
+        div.innerHTML = `<img src="${img}" alt="${name}" loading="lazy"/><p>${name}</p>`;
+        div.addEventListener('click', () => searchArtist(name));
         row.appendChild(div);
-      });
-    } catch(e) {
-      document.getElementById('artist-row').innerHTML = '<p style="color:var(--muted);padding:20px">Could not load artists.</p>';
+      } catch(e) {}
     }
+    if (!row.children.length) row.innerHTML = '<p style="color:var(--muted);padding:20px">Could not load artists.</p>';
   }
 
+  /* Albums: search popular albums */
+  const FEATURED_ALBUMS = ['Animal Bollywood','Stree 2','Midnights Taylor Swift','After Hours Weeknd','Diljit Dosanjh Ghost'];
+
   async function loadAlbums() {
-    try {
-      const data = await deezer('/chart/0/albums?limit=10');
-      const albums = data.data || [];
-      const grid = document.getElementById('album-grid');
-      grid.innerHTML = '';
-      albums.forEach(al => {
+    const grid = document.getElementById('album-grid');
+    grid.innerHTML = '';
+    for (const q of FEATURED_ALBUMS) {
+      try {
+        const r = await fetch(`${ITUNES}/search?term=${encodeURIComponent(q)}&entity=album&limit=1&media=music`);
+        const j = await r.json();
+        const al = j.results?.[0];
+        if (!al) continue;
         const div = document.createElement('div');
         div.className = 'album-card';
+        const art = (al.artworkUrl100||'').replace('100x100','300x300');
         div.innerHTML = `
-          <img src="${al.cover_medium}" alt="${al.title}" loading="lazy"/>
+          <img src="${art}" alt="${al.collectionName}" loading="lazy"/>
           <div class="album-card-info">
-            <div class="album-card-name">${al.title}</div>
-            <div class="album-card-artist">${al.artist?.name||''}</div>
+            <div class="album-card-name">${al.collectionName}</div>
+            <div class="album-card-artist">${al.artistName}</div>
           </div>`;
         div.addEventListener('click', () => loadAlbumTracks(al));
         grid.appendChild(div);
-      });
-    } catch(e) {
-      document.getElementById('album-grid').innerHTML = '<p style="color:var(--muted);padding:20px">Could not load albums.</p>';
+      } catch(e) {}
     }
+    if (!grid.children.length) grid.innerHTML = '<p style="color:var(--muted);padding:20px">Could not load albums.</p>';
   }
 
   async function loadAlbumTracks(album) {
     try {
-      toast(`Loading ${album.title}…`);
-      const data = await deezer(`/album/${album.id}/tracks?limit=20`);
-      const tracks = (data.data||[]).map(t => ({...t, album, artist: t.artist || album.artist}));
+      toast(`Loading ${album.collectionName||album.title}…`);
+      const r = await fetch(`${ITUNES}/lookup?id=${album.collectionId||album.id}&entity=song`);
+      const j = await r.json();
+      const tracks = (j.results||[]).filter(x=>x.wrapperType==='track'&&x.previewUrl).map(normalize);
       const listEl = document.getElementById('track-list');
       listEl.innerHTML = '';
       listEl._all = tracks;
       listEl._shown = tracks.length;
       tracks.forEach((t,i) => listEl.appendChild(makeTrackItem(t, tracks, i)));
-      document.getElementById('songs-title').innerHTML = `<em>${album.title}</em>`;
+      document.getElementById('songs-title').innerHTML = `<em>${album.collectionName||album.title}</em>`;
       document.getElementById('sec-songs').scrollIntoView({behavior:'smooth'});
     } catch(e) { toast('Could not load album tracks.'); }
   }
@@ -542,8 +585,7 @@
   async function searchArtist(name) {
     try {
       toast(`Loading ${name}…`);
-      const data = await deezer(`/search?q=${encodeURIComponent(name)}&limit=25`);
-      const tracks = data.data || [];
+      const tracks = await itunesSearch(name, 25);
       const listEl = document.getElementById('track-list');
       listEl.innerHTML = '';
       listEl._all = tracks;
@@ -561,8 +603,7 @@
     if (!q) { loadChart(); return; }
     searchTimer = setTimeout(async () => {
       try {
-        const data = await deezer(`/search?q=${encodeURIComponent(q)}&limit=25`);
-        const tracks = data.data || [];
+        const tracks = await itunesSearch(q, 25);
         const heroEl = document.getElementById('trending-hero');
         heroEl.innerHTML = '';
         tracks.slice(0,3).forEach((t,i) => heroEl.appendChild(makeHeroCard(t, tracks, i)));
