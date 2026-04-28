@@ -1,134 +1,189 @@
-# 🎵 Anshi Music — by Anshi Singh
+# 🎵 Mast Music
 
-A live music discovery website powered by the **Deezer API** with real songs, real album art, and 30-second audio previews.
-
-🌐 **Live at:** [https://anshi7898.github.io/Music-Website/](https://anshi7898.github.io/Music-Website/)
+Mast Music is a simple music discovery web application built using **HTML, CSS and Vanilla JavaScript** that allows users to search for songs and artists using the **iTunes Search API**, preview tracks, and browse featured music banners.
 
 ---
 
-## ✨ Features
+## 🚀 Features
 
-| Feature | Description |
-|---|---|
-| 🎧 Real Audio Playback | 30-second previews via Deezer API (no API key needed) |
-| 🖼️ Real Album Art | Actual cover images loaded from Deezer |
-| 🔍 Live Search | Search any song or artist in real-time |
-| 🎤 Artist Browsing | Click any artist to browse their songs |
-| 💿 Album Browsing | Click albums to see their full track list |
-| ⏯️ Music Player | Sticky bottom player with progress bar, prev/next, volume |
-| 📱 Responsive | Works on mobile and desktop |
-| 🌌 Dark Theme | Purple/pink gradient dark aesthetic |
+- 🔎 Search songs by artist or track name
+- 🎧 30-second audio previews
+- 🖼 Album artwork display
+- 👤 Artist information cards
+- ⏸ Auto-pause currently playing audio when another track starts
+- 🎨 Custom dark-themed responsive UI
+- 🏠 Featured music banners and artist showcase section
 
 ---
 
-## 🗂️ Project Structure
+## 📂 Project Structure
 
-```
-Music-Website/
-├── index.html      ← Entire website (HTML + CSS + JS in one file)
-└── README.md       ← This documentation
-```
-
----
-
-## 🚀 How to Host on GitHub Pages (Step-by-Step)
-
-### Step 1 — Create GitHub Repository
-
-1. Go to 👉 [https://github.com/new](https://github.com/new)
-2. Repository name: `Music-Website`
-3. Set to **Public**
-4. Click **Create repository**
-
-### Step 2 — Upload Files
-
-**Easy way (GitHub website):**
-1. Open your new repo on GitHub
-2. Click **Add file → Upload files**
-3. Drag and drop `index.html` and `README.md`
-4. Click **Commit changes**
-
-**Using Git (terminal):**
 ```bash
-git init
-git add index.html README.md
-git commit -m "Launch Anshi Music website"
-git branch -M main
-git remote add origin https://github.com/anshi7898/Music-Website.git
-git push -u origin main
-```
-
-### Step 3 — Enable GitHub Pages
-
-1. Go to your repo → **Settings** → **Pages** (left sidebar)
-2. Under **Branch**, select `main` and `/ (root)`
-3. Click **Save**
-4. Wait ~2 minutes then visit:
-
-👉 **https://anshi7898.github.io/Music-Website/**
-
----
-
-## 🔌 API Used
-
-**Deezer API** — Free, no API key required  
-- Endpoint: `https://api.deezer.com`
-- CORS Proxy used: `https://api.allorigins.win` (free, public proxy)
-
-### API Calls Made
-
-| Data | Deezer Endpoint |
-|---|---|
-| Trending tracks | `/chart/0/tracks?limit=30` |
-| Top artists | `/chart/0/artists?limit=14` |
-| Top albums | `/chart/0/albums?limit=10` |
-| Album tracks | `/album/{id}/tracks` |
-| Search | `/search?q={query}` |
-
----
-
-## 🛠️ How to Customize
-
-### Change Site Name
-Search for `Anshi Music` and `Anshi Singh` in `index.html` and replace with your preferred name.
-
-### Change Accent Colors
-Edit these CSS variables at the top of `index.html`:
-```css
-:root {
-  --accent: #a78bfa;   /* Purple */
-  --accent2: #f472b6;  /* Pink */
-  --bg: #080810;       /* Dark background */
-}
-```
-
-### Load Different Genre/Country Charts
-Replace the chart endpoint:
-```js
-// Bollywood / India chart
-await deezer('/chart/116/tracks?limit=30')
-
-// Pop chart
-await deezer('/chart/132/tracks?limit=30')
+Mast-Music/
+│
+├── index.html      # Main application structure
+├── style.css       # Styling and responsive layout
+├── script.js       # Search logic, API integration, audio controls
+└── README.md
 ```
 
 ---
 
-## 🧰 Technologies
+## 🛠 Tech Stack
 
-- **HTML5 / CSS3 / Vanilla JavaScript** — No frameworks needed
-- **Deezer API** — Real music data & 30s previews
-- **AllOrigins Proxy** — Handles CORS for the Deezer API
-- **Google Fonts** — Playfair Display + DM Sans
-- **GitHub Pages** — Free hosting
-
----
-
-## 📄 Credits
-
-
-- Rebuilt with live Deezer API by **Anshi Singh** (`anshi7898`)
+- HTML5
+- CSS3
+- JavaScript (ES6)
+- iTunes Search API
 
 ---
 
-*© 2025 Anshi Singh · [@anshi7898](https://github.com/anshi7898)*
+## ⚙️ How It Works
+
+### 1. Search for Music
+Enter an artist or song name in the search bar:
+
+```text
+Arijit Singh
+```
+
+The app fetches matching tracks from:
+
+```javascript
+https://itunes.apple.com/search?term=<search-term>
+```
+
+---
+
+## 2. Dynamic Song Cards
+Each result displays:
+
+- Album artwork
+- Artist name
+- Song title
+- Audio preview player
+
+---
+
+## 3. Single Audio Playback Logic
+Only one preview plays at a time.
+
+```javascript
+document.addEventListener('play', event => {
+    const audio = document.getElementsByTagName('audio');
+    for (let i = 0; i < audio.length; i++) {
+        if (audio[i] != event.target) {
+            audio[i].pause();
+        }
+    }
+}, true)
+```
+
+---
+
+## 📸 UI Sections
+
+### Header
+- Brand logo/title
+- Search bar
+- Search button
+
+### Search Results
+Dynamic song cards rendered from API responses.
+
+### Featured Home Section
+Includes:
+- Featured banners
+- Artist highlights
+- Curated playlist visuals
+
+---
+
+## ▶️ Running Locally
+
+Clone the repository:
+
+```bash
+git clone https://github.com/yourusername/mast-music.git
+cd mast-music
+```
+
+Open:
+
+```bash
+index.html
+```
+
+in your browser.
+
+No build setup required.
+
+---
+
+## 📷 Preview
+
+Add screenshots/gif here:
+
+```markdown
+![App Screenshot](screenshots/home.png)
+```
+
+---
+
+## 🔮 Possible Improvements
+Future enhancements:
+
+- Search on Enter key press
+- Pagination / infinite scrolling
+- Genre filters
+- Favorites playlist
+- Dark/Light mode toggle
+- Mobile optimization improvements
+- Spotify or YouTube integration
+- Lyrics support
+
+---
+
+## 🐛 Known Issues
+- Depends on iTunes API availability
+- Some search terms may return incomplete previews
+- Layout can be further optimized for smaller screens
+
+---
+
+## 🤝 Contributing
+
+Pull requests and improvements are welcome.
+
+1. Fork the repo  
+2. Create feature branch
+
+```bash
+git checkout -b feature-name
+```
+
+3. Commit changes
+
+```bash
+git commit -m "Added feature"
+```
+
+4. Push branch
+
+```bash
+git push origin feature-name
+```
+
+5. Open Pull Request
+
+---
+
+## 📄 License
+MIT License
+
+---
+
+## 👨‍💻 Author
+Developed by **Anshi Singh**
+
+```
